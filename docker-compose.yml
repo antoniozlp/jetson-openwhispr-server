@@ -1,0 +1,25 @@
+services:
+  whisper:
+    build: .
+    image: jetson-openwhispr-server:latest
+    container_name: openwhispr-whisper
+    # GPU access on a Jetson; without it the server silently falls back to the CPU.
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8178}:8178"
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+      SERVED_MODEL_NAME: ${SERVED_MODEL_NAME:-Whisper-Large-v3-Turbo}
+      COMPUTE_TYPE: ${COMPUTE_TYPE:-float16}
+      BEAM_SIZE: ${BEAM_SIZE:-5}
+      VAD_FILTER: ${VAD_FILTER:-true}
+    volumes:
+      # Models are downloaded from Hugging Face on first start and reused afterwards.
+      - ./models:/models
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8178/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
